@@ -2,7 +2,7 @@ import logo from "./logo.svg";
 import "./App.css";
 
 function App() {
-  return <div className="App">Welcome to incentivizeme</div>;
+  return <div className="App">Welcome to incentivizeme test</div>;
 }
 
 export default App;
