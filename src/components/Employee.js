@@ -11,6 +11,11 @@ import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import Checkbox from "@mui/material/Checkbox";
 import TableSortLabel from "@mui/material/TableSortLabel";
+import Dialog from "@mui/material/Dialog";
+import DialogTitle from "@mui/material/DialogTitle";
+import DialogContent from "@mui/material/DialogContent";
+import DialogActions from "@mui/material/DialogActions";
+import TextField from "@mui/material/TextField";
 
 const initialRows = [
   { id: 1, lastName: "Snow", firstName: "Jon", age: 14 },
@@ -30,38 +35,12 @@ export const Employee = () => {
   const [orderBy, setOrderBy] = useState("id");
   const [selected, setSelected] = useState([]);
   const [dense, setDense] = useState(false);
-
-  const columns = [
-    { field: "id", headerName: "ID", width: 90 },
-    {
-      field: "firstName",
-      headerName: "First name",
-      width: 150,
-      editable: true,
-    },
-    {
-      field: "lastName",
-      headerName: "Last name",
-      width: 150,
-      editable: true,
-    },
-    {
-      field: "age",
-      headerName: "Age",
-      type: "number",
-      width: 110,
-      editable: true,
-    },
-    {
-      field: "fullName",
-      headerName: "Full name",
-      description: "This column has a value getter and is not sortable.",
-      sortable: false,
-      width: 160,
-      valueGetter: (params) =>
-        `${params.row.firstName || ""} ${params.row.lastName || ""}`,
-    },
-  ];
+  const [open, setOpen] = useState(false);
+  const [newEmployee, setNewEmployee] = useState({
+    firstName: "",
+    lastName: "",
+    age: "",
+  });
 
   const handleRequestSort = (event, property) => {
     const isAsc = orderBy === property && order === "asc";
@@ -100,10 +79,37 @@ export const Employee = () => {
 
   const isSelected = (id) => selected.indexOf(id) !== -1;
 
+  const handleClickOpen = () => {
+    setOpen(true);
+  };
+
+  const handleClose = () => {
+    setOpen(false);
+  };
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setNewEmployee({
+      ...newEmployee,
+      [name]: value,
+    });
+  };
+
+  const handleAddEmployee = () => {
+    const newId =
+      rows.length > 0 ? Math.max(...rows.map((row) => row.id)) + 1 : 1;
+    const newRow = { id: newId, ...newEmployee };
+    setRows([...rows, newRow]);
+    setNewEmployee({ firstName: "", lastName: "", age: "" });
+    handleClose();
+  };
+
   return (
     <Box sx={{ height: 400, width: "100%", paddingTop: 5 }}>
       <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
-        <Button variant="contained">+Create</Button>
+        <Button variant="contained" onClick={handleClickOpen}>
+          +Create
+        </Button>
       </Box>
       <TableContainer component={Paper}>
         <Table
@@ -159,12 +165,17 @@ export const Employee = () => {
                   Age
                 </TableSortLabel>
               </TableCell>
+              <TableCell>Actions</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {rows.map((row, index) => {
               const isItemSelected = isSelected(row.id);
               const labelId = `enhanced-table-checkbox-${index}`;
+
+              function handleDeleteClick(id) {}
+
+              function handleEditClick(id) {}
 
               return (
                 <TableRow
@@ -196,12 +207,72 @@ export const Employee = () => {
                   </TableCell>
                   <TableCell>{row.lastName}</TableCell>
                   <TableCell>{row.age}</TableCell>
+                  <TableCell>
+                    <Button
+                      variant="contained"
+                      color="primary"
+                      size="small"
+                      onClick={() => handleEditClick(row.id)}
+                      sx={{ marginRight: 1 }}
+                    >
+                      Edit
+                    </Button>
+                    <Button
+                      variant="contained"
+                      color="secondary"
+                      size="small"
+                      onClick={() => handleDeleteClick(row.id)}
+                    >
+                      Delete
+                    </Button>
+                  </TableCell>
                 </TableRow>
               );
             })}
           </TableBody>
         </Table>
       </TableContainer>
+      <Dialog open={open} onClose={handleClose}>
+        <DialogTitle>Create New Employee</DialogTitle>
+        <DialogContent>
+          <TextField
+            autoFocus
+            margin="dense"
+            name="firstName"
+            label="First Name"
+            type="text"
+            fullWidth
+            value={newEmployee.firstName}
+            onChange={handleInputChange}
+          />
+          <TextField
+            margin="dense"
+            name="lastName"
+            label="Last Name"
+            type="text"
+            fullWidth
+            value={newEmployee.lastName}
+            onChange={handleInputChange}
+          />
+          <TextField
+            margin="dense"
+            name="age"
+            label="Age"
+            type="number"
+            fullWidth
+            value={newEmployee.age}
+            onChange={handleInputChange}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleClose} color="primary">
+            Cancel
+          </Button>
+          <Button onClick={handleAddEmployee} color="primary">
+            Add
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };
