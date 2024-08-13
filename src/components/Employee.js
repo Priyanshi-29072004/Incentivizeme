@@ -1,7 +1,6 @@
-import * as React from "react";
+import React, { useState, useEffect } from "react";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
-import { useState } from "react";
 import Paper from "@mui/material/Paper";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
@@ -17,30 +16,33 @@ import DialogContent from "@mui/material/DialogContent";
 import DialogActions from "@mui/material/DialogActions";
 import TextField from "@mui/material/TextField";
 
-const initialRows = [
-  { id: 1, lastName: "Snow", firstName: "Jon", age: 14 },
-  { id: 2, lastName: "Lannister", firstName: "Cersei", age: 31 },
-  { id: 3, lastName: "Lannister", firstName: "Jaime", age: 31 },
-  { id: 4, lastName: "Stark", firstName: "Arya", age: 11 },
-  { id: 5, lastName: "Targaryen", firstName: "Daenerys", age: 22 },
-  { id: 6, lastName: "Melisandre", firstName: "Jon", age: 150 },
-  { id: 7, lastName: "Clifford", firstName: "Ferrara", age: 44 },
-  { id: 8, lastName: "Frances", firstName: "Rossini", age: 36 },
-  { id: 9, lastName: "Roxie", firstName: "Harvey", age: 65 },
-];
-
 export const Employee = () => {
-  const [rows, setRows] = useState(initialRows);
+  const [rows, setRows] = useState([]);
   const [order, setOrder] = useState("asc");
   const [orderBy, setOrderBy] = useState("id");
   const [selected, setSelected] = useState([]);
-  const [dense, setDense] = useState(false);
   const [open, setOpen] = useState(false);
   const [newEmployee, setNewEmployee] = useState({
+    _id: null,
     firstName: "",
     lastName: "",
     age: "",
   });
+
+  // Fetch data from API when the component mounts
+  useEffect(() => {
+    const fetchEmployees = async () => {
+      try {
+        const response = await fetch("http://localhost:5000/api/employees");
+        const data = await response.json();
+        setRows(data);
+      } catch (error) {
+        console.error("Error fetching employees:", error);
+      }
+    };
+
+    fetchEmployees();
+  }, []);
 
   const handleRequestSort = (event, property) => {
     const isAsc = orderBy === property && order === "asc";
@@ -50,7 +52,7 @@ export const Employee = () => {
 
   const handleSelectAllClick = (event) => {
     if (event.target.checked) {
-      const newSelecteds = rows.map((n) => n.id);
+      const newSelecteds = rows.map((n) => n._id);
       setSelected(newSelecteds);
       return;
     }
@@ -85,6 +87,12 @@ export const Employee = () => {
 
   const handleClose = () => {
     setOpen(false);
+    setNewEmployee({
+      _id: null,
+      firstName: "",
+      lastName: "",
+      age: "",
+    });
   };
 
   const handleInputChange = (e) => {
@@ -95,13 +103,80 @@ export const Employee = () => {
     });
   };
 
-  const handleAddEmployee = () => {
-    const newId =
-      rows.length > 0 ? Math.max(...rows.map((row) => row.id)) + 1 : 1;
-    const newRow = { id: newId, ...newEmployee };
-    setRows([...rows, newRow]);
-    setNewEmployee({ firstName: "", lastName: "", age: "" });
+  const handleAddEmployee = async () => {
+    if (newEmployee._id) {
+      // PUT request to update an existing employee
+      try {
+        const response = await fetch(
+          `http://localhost:5000/api/employees/${newEmployee._id}`,
+          {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(newEmployee),
+          }
+        );
+
+        if (response.ok) {
+          const updatedEmployee = await response.json();
+          setRows(
+            rows.map((row) =>
+              row._id === updatedEmployee._id ? updatedEmployee : row
+            )
+          );
+        } else {
+          console.error("Failed to update employee");
+        }
+      } catch (error) {
+        console.error("Error:", error);
+      }
+    } else {
+      try {
+        const response = await fetch("http://localhost:5000/api/employees", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(newEmployee),
+        });
+
+        if (response.ok) {
+          const savedEmployee = await response.json();
+          setRows([...rows, savedEmployee]); // Add the saved employee to the state
+        } else {
+          console.error("Failed to add employee");
+        }
+      } catch (error) {
+        console.error("Error:", error);
+      }
+    }
     handleClose();
+  };
+
+  const handleDeleteClick = async (_id) => {
+    try {
+      const response = await fetch(
+        `http://localhost:5000/api/employees/${_id}`,
+        {
+          method: "DELETE",
+        }
+      );
+
+      if (response.ok) {
+        setRows(rows.filter((row) => row._id !== _id)); // Remove the deleted employee from the state
+      } else {
+        console.error("Failed to delete employee");
+      }
+    } catch (error) {
+      console.error("Error:", error);
+    }
+  };
+
+  const handleEditClick = (_id) => {
+    const employeeToEdit = rows.find((row) => row._id === _id);
+    setNewEmployee(employeeToEdit);
+    setOpen(true);
   };
 
   return (
@@ -115,7 +190,7 @@ export const Employee = () => {
         <Table
           sx={{ minWidth: 750 }}
           aria-labelledby="tableTitle"
-          size={dense ? "small" : "medium"}
+          size="medium"
         >
           <TableHead>
             <TableRow>
@@ -170,21 +245,17 @@ export const Employee = () => {
           </TableHead>
           <TableBody>
             {rows.map((row, index) => {
-              const isItemSelected = isSelected(row.id);
+              const isItemSelected = isSelected(row._id);
               const labelId = `enhanced-table-checkbox-${index}`;
-
-              function handleDeleteClick(id) {}
-
-              function handleEditClick(id) {}
 
               return (
                 <TableRow
                   hover
-                  onClick={(event) => handleClick(event, row.id)}
+                  onClick={(event) => handleClick(event, row._id)}
                   role="checkbox"
                   aria-checked={isItemSelected}
                   tabIndex={-1}
-                  key={row.id}
+                  key={row._id}
                   selected={isItemSelected}
                   sx={{ cursor: "pointer" }}
                 >
@@ -212,7 +283,7 @@ export const Employee = () => {
                       variant="contained"
                       color="primary"
                       size="small"
-                      onClick={() => handleEditClick(row.id)}
+                      onClick={() => handleEditClick(row._id)}
                       sx={{ marginRight: 1 }}
                     >
                       Edit
@@ -221,7 +292,7 @@ export const Employee = () => {
                       variant="contained"
                       color="secondary"
                       size="small"
-                      onClick={() => handleDeleteClick(row.id)}
+                      onClick={() => handleDeleteClick(row._id)}
                     >
                       Delete
                     </Button>
@@ -233,7 +304,9 @@ export const Employee = () => {
         </Table>
       </TableContainer>
       <Dialog open={open} onClose={handleClose}>
-        <DialogTitle>Create New Employee</DialogTitle>
+        <DialogTitle>
+          {newEmployee._id ? "Edit Employee" : "Create New Employee"}
+        </DialogTitle>
         <DialogContent>
           <TextField
             autoFocus
@@ -269,7 +342,7 @@ export const Employee = () => {
             Cancel
           </Button>
           <Button onClick={handleAddEmployee} color="primary">
-            Add
+            {newEmployee._id ? "Update" : "Add"}
           </Button>
         </DialogActions>
       </Dialog>
