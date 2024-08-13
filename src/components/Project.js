@@ -1,7 +1,6 @@
-import * as React from "react";
+import React, { useState, useEffect } from "react";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
-import { useState } from "react";
 import Paper from "@mui/material/Paper";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
@@ -11,58 +10,40 @@ import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import Checkbox from "@mui/material/Checkbox";
 import TableSortLabel from "@mui/material/TableSortLabel";
+import Dialog from "@mui/material/Dialog";
+import DialogTitle from "@mui/material/DialogTitle";
+import DialogContent from "@mui/material/DialogContent";
+import DialogActions from "@mui/material/DialogActions";
+import TextField from "@mui/material/TextField";
 
-const initialRows = [
-  { id: 1, lastName: "Snow", firstName: "Jon", age: 14 },
-  { id: 2, lastName: "Lannister", firstName: "Cersei", age: 31 },
-  { id: 3, lastName: "Lannister", firstName: "Jaime", age: 31 },
-  { id: 4, lastName: "Stark", firstName: "Arya", age: 11 },
-  { id: 5, lastName: "Targaryen", firstName: "Daenerys", age: 22 },
-  { id: 6, lastName: "Melisandre", firstName: "Jon", age: 150 },
-  { id: 7, lastName: "Clifford", firstName: "Ferrara", age: 44 },
-  { id: 8, lastName: "Frances", firstName: "Rossini", age: 36 },
-  { id: 9, lastName: "Roxie", firstName: "Harvey", age: 65 },
-  { id: 10,lastname: "heny",firstname: "dummy",age: 23},
-];
-
-export const project = () => {
-  const [rows, setRows] = useState(initialRows);
+export const Project = () => {
+  const [rows, setRows] = useState([]);
   const [order, setOrder] = useState("asc");
   const [orderBy, setOrderBy] = useState("id");
   const [selected, setSelected] = useState([]);
-  const [dense, setDense] = useState(false);
+  const [open, setOpen] = useState(false);
+  const [newProject, setNewEmployee] = useState({
+    _id: null,
+    name: "",
+  });
 
-  const columns = [
-    { field: "id", headerName: "ID", width: 90 },
-    {
-      field: "firstName",
-      headerName: "First name",
-      width: 150,
-      editable: true,
-    },
-    {
-      field: "lastName",
-      headerName: "Last name",
-      width: 150,
-      editable: true,
-    },
-    {
-      field: "age",
-      headerName: "Age",
-      type: "number",
-      width: 110,
-      editable: true,
-    },
-    {
-      field: "fullName",
-      headerName: "Full name",
-      description: "This column has a value getter and is not sortable.",
-      sortable: false,
-      width: 160,
-      valueGetter: (params) =>
-        `${params.row.firstName || ""} ${params.row.lastName || ""}`,
-    },
-  ];
+  // Fetch data from API when the component mounts
+  useEffect(() => {
+    const fetchEmployees = async () => {
+      try {
+        const response = await fetch("http://localhost:5000/api/projects");
+        if (!response.ok) {
+          throw new Error("Network response was not ok");
+        }
+        const data = await response.json();
+        setRows(data);
+      } catch (error) {
+        console.error("Error fetching employees:", error);
+      }
+    };
+
+    fetchEmployees();
+  }, []);
 
   const handleRequestSort = (event, property) => {
     const isAsc = orderBy === property && order === "asc";
@@ -72,7 +53,7 @@ export const project = () => {
 
   const handleSelectAllClick = (event) => {
     if (event.target.checked) {
-      const newSelecteds = rows.map((n) => n.id);
+      const newSelecteds = rows.map((n) => n._id);
       setSelected(newSelecteds);
       return;
     }
@@ -80,6 +61,7 @@ export const project = () => {
   };
 
   const handleClick = (event, id) => {
+    event.stopPropagation();
     const selectedIndex = selected.indexOf(id);
     let newSelected = [];
 
@@ -101,16 +83,114 @@ export const project = () => {
 
   const isSelected = (id) => selected.indexOf(id) !== -1;
 
+  const handleClickOpen = () => {
+    setOpen(true);
+  };
+
+  const handleClose = () => {
+    setOpen(false);
+    setNewEmployee({
+      _id: null,
+      name: "",
+    });
+  };
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setNewEmployee({
+      ...newProject,
+      [name]: value,
+    });
+  };
+
+  const handleAddEmployee = async () => {
+    if (newProject._id) {
+      // PUT request to update an existing employee
+      try {
+        const response = await fetch(
+          `http://localhost:5000/api/projects/${newProject._id}`,
+          {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(newProject),
+          }
+        );
+
+        if (response.ok) {
+          const updatedEmployee = await response.json();
+          setRows(
+            rows.map((row) =>
+              row._id === updatedEmployee._id ? updatedEmployee : row
+            )
+          );
+        } else {
+          console.error("Failed to update employee");
+        }
+      } catch (error) {
+        console.error("Error:", error);
+      }
+    } else {
+      try {
+        const response = await fetch("http://localhost:5000/api/projects", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(newProject),
+        });
+
+        if (response.ok) {
+          const savedEmployee = await response.json();
+          setRows([...rows, savedEmployee]); // Add the saved employee to the state
+        } else {
+          console.error("Failed to add employee");
+        }
+      } catch (error) {
+        console.error("Error:", error);
+      }
+    }
+    handleClose();
+  };
+
+  const handleDeleteClick = async (_id) => {
+    try {
+      const response = await fetch(
+        `http://localhost:5000/api/projects/${_id}`,
+        {
+          method: "DELETE",
+        }
+      );
+
+      if (response.ok) {
+        setRows(rows.filter((row) => row._id !== _id)); // Remove the deleted employee from the state
+      } else {
+        console.error("Failed to delete employee");
+      }
+    } catch (error) {
+      console.error("Error:", error);
+    }
+  };
+
+  const handleEditClick = (_id) => {
+    const employeeToEdit = rows.find((row) => row._id === _id);
+    setNewEmployee(employeeToEdit);
+    setOpen(true);
+  };
+
   return (
     <Box sx={{ height: 400, width: "100%", paddingTop: 5 }}>
       <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
-        <Button variant="contained">+Create</Button>
+        <Button variant="contained" onClick={handleClickOpen}>
+          + Create
+        </Button>
       </Box>
       <TableContainer component={Paper}>
         <Table
           sx={{ minWidth: 750 }}
           aria-labelledby="tableTitle"
-          size={dense ? "small" : "medium"}
+          size="medium"
         >
           <TableHead>
             <TableRow>
@@ -125,56 +205,34 @@ export const project = () => {
                 />
               </TableCell>
               <TableCell
-                key="firstName"
-                sortDirection={orderBy === "firstName" ? order : false}
+                key="name"
+                sortDirection={orderBy === "name" ? order : false}
               >
                 <TableSortLabel
-                  active={orderBy === "firstName"}
-                  direction={orderBy === "firstName" ? order : "asc"}
-                  onClick={(event) => handleRequestSort(event, "firstName")}
+                  active={orderBy === "name"}
+                  direction={orderBy === "name" ? order : "asc"}
+                  onClick={(event) => handleRequestSort(event, "name")}
                 >
-                  First Name
+                  name
                 </TableSortLabel>
               </TableCell>
-              <TableCell
-                key="lastName"
-                sortDirection={orderBy === "lastName" ? order : false}
-              >
-                <TableSortLabel
-                  active={orderBy === "lastName"}
-                  direction={orderBy === "lastName" ? order : "asc"}
-                  onClick={(event) => handleRequestSort(event, "lastName")}
-                >
-                  Last Name
-                </TableSortLabel>
-              </TableCell>
-              <TableCell
-                key="age"
-                sortDirection={orderBy === "age" ? order : false}
-              >
-                <TableSortLabel
-                  active={orderBy === "age"}
-                  direction={orderBy === "age" ? order : "asc"}
-                  onClick={(event) => handleRequestSort(event, "age")}
-                >
-                  Age
-                </TableSortLabel>
-              </TableCell>
+              {/* <TableCell>Actions</TableCell> */}
+              <TableCell>Actions</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {rows.map((row, index) => {
-              const isItemSelected = isSelected(row.id);
+              const isItemSelected = isSelected(row._id);
               const labelId = `enhanced-table-checkbox-${index}`;
 
               return (
                 <TableRow
                   hover
-                  onClick={(event) => handleClick(event, row.id)}
+                  onClick={(event) => handleClick(event, row._id)}
                   role="checkbox"
                   aria-checked={isItemSelected}
                   tabIndex={-1}
-                  key={row.id}
+                  key={row._id}
                   selected={isItemSelected}
                   sx={{ cursor: "pointer" }}
                 >
@@ -193,16 +251,65 @@ export const project = () => {
                     scope="row"
                     padding="none"
                   >
-                    {row.firstName}
+                    {row.name}
                   </TableCell>
-                  <TableCell>{row.lastName}</TableCell>
-                  <TableCell>{row.age}</TableCell>
+
+                  <TableCell>
+                    <Button
+                      variant="contained"
+                      color="primary"
+                      size="small"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleEditClick(row._id);
+                      }}
+                      sx={{ marginRight: 1 }}
+                    >
+                      Edit
+                    </Button>
+                    <Button
+                      variant="contained"
+                      color="secondary"
+                      size="small"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteClick(row._id);
+                      }}
+                    >
+                      Delete
+                    </Button>
+                  </TableCell>
                 </TableRow>
               );
             })}
           </TableBody>
         </Table>
       </TableContainer>
+      <Dialog open={open} onClose={handleClose}>
+        <DialogTitle>
+          {newProject._id ? "Edit Employee" : "Create New Employee"}
+        </DialogTitle>
+        <DialogContent>
+          <TextField
+            autoFocus
+            margin="dense"
+            name="name"
+            label=" name"
+            type="text"
+            fullWidth
+            value={newProject.name}
+            onChange={handleInputChange}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleClose} color="primary">
+            Cancel
+          </Button>
+          <Button onClick={handleAddEmployee} color="primary">
+            {newProject._id ? "Update" : "Add"}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };
