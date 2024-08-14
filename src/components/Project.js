@@ -15,6 +15,7 @@ import DialogTitle from "@mui/material/DialogTitle";
 import DialogContent from "@mui/material/DialogContent";
 import DialogActions from "@mui/material/DialogActions";
 import TextField from "@mui/material/TextField";
+import CustomDatePicker from "./CustomDatePicker";
 
 export const Project = () => {
   const [rows, setRows] = useState([]);
@@ -22,14 +23,15 @@ export const Project = () => {
   const [orderBy, setOrderBy] = useState("id");
   const [selected, setSelected] = useState([]);
   const [open, setOpen] = useState(false);
-  const [newProject, setNewEmployee] = useState({
+  const [newProject, setNewProject] = useState({
     _id: null,
     name: "",
+    date: null,
   });
 
   // Fetch data from API when the component mounts
   useEffect(() => {
-    const fetchEmployees = async () => {
+    const fetchProjects = async () => {
       try {
         const response = await fetch("http://localhost:5000/api/projects");
         if (!response.ok) {
@@ -38,11 +40,11 @@ export const Project = () => {
         const data = await response.json();
         setRows(data);
       } catch (error) {
-        console.error("Error fetching employees:", error);
+        console.error("Error fetching projects:", error);
       }
     };
 
-    fetchEmployees();
+    fetchProjects();
   }, []);
 
   const handleRequestSort = (event, property) => {
@@ -89,23 +91,24 @@ export const Project = () => {
 
   const handleClose = () => {
     setOpen(false);
-    setNewEmployee({
+    setNewProject({
       _id: null,
       name: "",
+      date: null,
     });
   };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setNewEmployee({
+    setNewProject({
       ...newProject,
       [name]: value,
     });
   };
 
-  const handleAddEmployee = async () => {
+  const handleAddProject = async () => {
     if (newProject._id) {
-      // PUT request to update an existing employee
+      // PUT request to update an existing project
       try {
         const response = await fetch(
           `http://localhost:5000/api/projects/${newProject._id}`,
@@ -119,14 +122,14 @@ export const Project = () => {
         );
 
         if (response.ok) {
-          const updatedEmployee = await response.json();
+          const updatedProject = await response.json();
           setRows(
             rows.map((row) =>
-              row._id === updatedEmployee._id ? updatedEmployee : row
+              row._id === updatedProject._id ? updatedProject : row
             )
           );
         } else {
-          console.error("Failed to update employee");
+          console.error("Failed to update project");
         }
       } catch (error) {
         console.error("Error:", error);
@@ -142,10 +145,10 @@ export const Project = () => {
         });
 
         if (response.ok) {
-          const savedEmployee = await response.json();
-          setRows([...rows, savedEmployee]); // Add the saved employee to the state
+          const savedProject = await response.json();
+          setRows([...rows, savedProject]); // Add the saved project to the state
         } else {
-          console.error("Failed to add employee");
+          console.error("Failed to add project");
         }
       } catch (error) {
         console.error("Error:", error);
@@ -164,9 +167,9 @@ export const Project = () => {
       );
 
       if (response.ok) {
-        setRows(rows.filter((row) => row._id !== _id)); // Remove the deleted employee from the state
+        setRows(rows.filter((row) => row._id !== _id)); // Remove the deleted project from the state
       } else {
-        console.error("Failed to delete employee");
+        console.error("Failed to delete project");
       }
     } catch (error) {
       console.error("Error:", error);
@@ -174,8 +177,8 @@ export const Project = () => {
   };
 
   const handleEditClick = (_id) => {
-    const employeeToEdit = rows.find((row) => row._id === _id);
-    setNewEmployee(employeeToEdit);
+    const projectToEdit = rows.find((row) => row._id === _id);
+    setNewProject(projectToEdit);
     setOpen(true);
   };
 
@@ -216,7 +219,20 @@ export const Project = () => {
                   name
                 </TableSortLabel>
               </TableCell>
-              {/* <TableCell>Actions</TableCell> */}
+
+              <TableCell
+                key="date"
+                sortDirection={orderBy === "date" ? order : false}
+              >
+                <TableSortLabel
+                  active={orderBy === "date"}
+                  direction={orderBy === "date" ? order : "asc"}
+                  onClick={(event) => handleRequestSort(event, "date")}
+                >
+                  Date
+                </TableSortLabel>
+              </TableCell>
+
               <TableCell>Actions</TableCell>
             </TableRow>
           </TableHead>
@@ -255,6 +271,12 @@ export const Project = () => {
                   </TableCell>
 
                   <TableCell>
+                    {row.date
+                      ? new Date(row.date).toLocaleDateString()
+                      : "No Date"}{" "}
+                  </TableCell>
+
+                  <TableCell>
                     <Button
                       variant="contained"
                       color="primary"
@@ -287,7 +309,7 @@ export const Project = () => {
       </TableContainer>
       <Dialog open={open} onClose={handleClose}>
         <DialogTitle>
-          {newProject._id ? "Edit Employee" : "Create New Employee"}
+          {newProject._id ? "Edit Project" : "Create New Project"}
         </DialogTitle>
         <DialogContent>
           <TextField
@@ -300,12 +322,21 @@ export const Project = () => {
             value={newProject.name}
             onChange={handleInputChange}
           />
+          <CustomDatePicker
+            value={newProject.date}
+            onChange={(newValue) => {
+              setNewProject({
+                ...newProject,
+                date: newValue,
+              });
+            }}
+          />
         </DialogContent>
         <DialogActions>
           <Button onClick={handleClose} color="primary">
             Cancel
           </Button>
-          <Button onClick={handleAddEmployee} color="primary">
+          <Button onClick={handleAddProject} color="primary">
             {newProject._id ? "Update" : "Add"}
           </Button>
         </DialogActions>
