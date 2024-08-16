@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Paper from "@mui/material/Paper";
@@ -16,35 +16,54 @@ import DialogContent from "@mui/material/DialogContent";
 import DialogActions from "@mui/material/DialogActions";
 import TextField from "@mui/material/TextField";
 import CustomDatePicker from "./CustomDatePicker";
+import MultiSelection from "./Multiautoselection";
 
 export const Project = () => {
   const [rows, setRows] = useState([]);
   const [order, setOrder] = useState("asc");
-  const [orderBy, setOrderBy] = useState("id");
+  const [orderBy, setOrderBy] = useState("name");
   const [selected, setSelected] = useState([]);
   const [open, setOpen] = useState(false);
   const [newProject, setNewProject] = useState({
     _id: null,
     name: "",
     date: null,
+    employees: [], // New field for multi-selection
   });
+  const [selectedEmployees, setSelectedEmployees] = useState([]); // State for multi-selection values
 
-  // Fetch data from API when the component mounts
   useEffect(() => {
     const fetchProjects = async () => {
       try {
         const response = await fetch("http://localhost:5000/api/projects");
-        if (!response.ok) {
-          throw new Error("Network response was not ok");
-        }
+        if (!response.ok) throw new Error("Failed to fetch projects");
         const data = await response.json();
         setRows(data);
       } catch (error) {
         console.error("Error fetching projects:", error);
       }
     };
-
     fetchProjects();
+  }, []);
+
+  // Fetch employees for the multi-selection field
+  const [employees, setEmployees] = useState([]);
+  useEffect(() => {
+    const fetchEmployees = async () => {
+      try {
+        const response = await fetch("http://localhost:5000/api/employees");
+        if (!response.ok) throw new Error("Failed to fetch employees");
+        const data = await response.json();
+        const transformedData = data.map((employee) => ({
+          ...employee,
+          name: `${employee.firstName} ${employee.lastName}`,
+        }));
+        setEmployees(transformedData);
+      } catch (error) {
+        console.error("Error fetching employees:", error);
+      }
+    };
+    fetchEmployees();
   }, []);
 
   const handleRequestSort = (event, property) => {
@@ -55,106 +74,69 @@ export const Project = () => {
 
   const handleSelectAllClick = (event) => {
     if (event.target.checked) {
-      const newSelecteds = rows.map((n) => n._id);
-      setSelected(newSelecteds);
-      return;
+      setSelected(rows.map((row) => row._id));
+    } else {
+      setSelected([]);
     }
-    setSelected([]);
   };
 
   const handleClick = (event, id) => {
     event.stopPropagation();
     const selectedIndex = selected.indexOf(id);
-    let newSelected = [];
-
-    if (selectedIndex === -1) {
-      newSelected = newSelected.concat(selected, id);
-    } else if (selectedIndex === 0) {
-      newSelected = newSelected.concat(selected.slice(1));
-    } else if (selectedIndex === selected.length - 1) {
-      newSelected = newSelected.concat(selected.slice(0, -1));
-    } else if (selectedIndex > 0) {
-      newSelected = newSelected.concat(
-        selected.slice(0, selectedIndex),
-        selected.slice(selectedIndex + 1)
-      );
-    }
-
+    const newSelected =
+      selectedIndex === -1
+        ? [...selected, id]
+        : [
+            ...selected.slice(0, selectedIndex),
+            ...selected.slice(selectedIndex + 1),
+          ];
     setSelected(newSelected);
   };
 
   const isSelected = (id) => selected.indexOf(id) !== -1;
 
-  const handleClickOpen = () => {
-    setOpen(true);
-  };
-
+  const handleClickOpen = () => setOpen(true);
   const handleClose = () => {
     setOpen(false);
-    setNewProject({
-      _id: null,
-      name: "",
-      date: null,
-    });
+    setNewProject({ _id: null, name: "", date: null, employees: [] });
+    setSelectedEmployees([]);
   };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setNewProject({
-      ...newProject,
-      [name]: value,
-    });
+    setNewProject((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleAddProject = async () => {
-    if (newProject._id) {
-      // PUT request to update an existing project
-      try {
-        const response = await fetch(
-          `http://localhost:5000/api/projects/${newProject._id}`,
-          {
-            method: "PUT",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify(newProject),
-          }
-        );
+  const handleAddOrUpdateProject = async () => {
+    const employeeIds = selectedEmployees.map((employee) => employee._id);
 
-        if (response.ok) {
-          const updatedProject = await response.json();
-          setRows(
-            rows.map((row) =>
-              row._id === updatedProject._id ? updatedProject : row
+    const projectData = { ...newProject, employees: employeeIds };
+    const method = projectData._id ? "PUT" : "POST";
+    const url = projectData._id
+      ? `http://localhost:5000/api/projects/${projectData._id}`
+      : "http://localhost:5000/api/projects";
+
+    try {
+      const response = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(projectData),
+      });
+
+      if (!response.ok) throw new Error("Failed to save project");
+
+      const savedProject = await response.json();
+      setRows((prev) =>
+        method === "POST"
+          ? [...prev, savedProject]
+          : prev.map((row) =>
+              row._id === savedProject._id ? savedProject : row
             )
-          );
-        } else {
-          console.error("Failed to update project");
-        }
-      } catch (error) {
-        console.error("Error:", error);
-      }
-    } else {
-      try {
-        const response = await fetch("http://localhost:5000/api/projects", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(newProject),
-        });
-
-        if (response.ok) {
-          const savedProject = await response.json();
-          setRows([...rows, savedProject]); // Add the saved project to the state
-        } else {
-          console.error("Failed to add project");
-        }
-      } catch (error) {
-        console.error("Error:", error);
-      }
+      );
+      handleClose();
+    } catch (error) {
+      console.error("Error saving project:", error);
     }
-    handleClose();
   };
 
   const handleDeleteClick = async (_id) => {
@@ -166,19 +148,22 @@ export const Project = () => {
         }
       );
 
-      if (response.ok) {
-        setRows(rows.filter((row) => row._id !== _id)); // Remove the deleted project from the state
-      } else {
-        console.error("Failed to delete project");
-      }
+      if (!response.ok) throw new Error("Failed to delete project");
+
+      setRows((prev) => prev.filter((row) => row._id !== _id));
     } catch (error) {
-      console.error("Error:", error);
+      console.error("Error deleting project:", error);
     }
   };
 
   const handleEditClick = (_id) => {
     const projectToEdit = rows.find((row) => row._id === _id);
-    setNewProject(projectToEdit);
+    setNewProject({
+      ...projectToEdit,
+      date: projectToEdit.date ? new Date(projectToEdit.date) : null,
+      employees: projectToEdit.employees || [], // Ensure employees are set
+    });
+    setSelectedEmployees(projectToEdit.employees || []); // Set selected employees for multi-selection
     setOpen(true);
   };
 
@@ -190,11 +175,7 @@ export const Project = () => {
         </Button>
       </Box>
       <TableContainer component={Paper}>
-        <Table
-          sx={{ minWidth: 750 }}
-          aria-labelledby="tableTitle"
-          size="medium"
-        >
+        <Table sx={{ minWidth: 750 }} size="medium">
           <TableHead>
             <TableRow>
               <TableCell padding="checkbox">
@@ -216,10 +197,9 @@ export const Project = () => {
                   direction={orderBy === "name" ? order : "asc"}
                   onClick={(event) => handleRequestSort(event, "name")}
                 >
-                  name
+                  Name
                 </TableSortLabel>
               </TableCell>
-
               <TableCell
                 key="date"
                 sortDirection={orderBy === "date" ? order : false}
@@ -232,7 +212,6 @@ export const Project = () => {
                   Date
                 </TableSortLabel>
               </TableCell>
-
               <TableCell>Actions</TableCell>
             </TableRow>
           </TableHead>
@@ -256,9 +235,7 @@ export const Project = () => {
                     <Checkbox
                       color="primary"
                       checked={isItemSelected}
-                      inputProps={{
-                        "aria-labelledby": labelId,
-                      }}
+                      inputProps={{ "aria-labelledby": labelId }}
                     />
                   </TableCell>
                   <TableCell
@@ -269,13 +246,11 @@ export const Project = () => {
                   >
                     {row.name}
                   </TableCell>
-
                   <TableCell>
                     {row.date
                       ? new Date(row.date).toLocaleDateString()
-                      : "No Date"}{" "}
+                      : "No Date"}
                   </TableCell>
-
                   <TableCell>
                     <Button
                       variant="contained"
@@ -316,7 +291,7 @@ export const Project = () => {
             autoFocus
             margin="dense"
             name="name"
-            label=" name"
+            label="Name"
             type="text"
             fullWidth
             value={newProject.name}
@@ -324,19 +299,23 @@ export const Project = () => {
           />
           <CustomDatePicker
             value={newProject.date}
-            onChange={(newValue) => {
-              setNewProject({
-                ...newProject,
-                date: newValue,
-              });
-            }}
+            onChange={(newValue) =>
+              setNewProject((prev) => ({ ...prev, date: newValue }))
+            }
           />
+          <Suspense fallback={<div>Loading...</div>}>
+            <MultiSelection
+              options={employees}
+              value={selectedEmployees}
+              onChange={setSelectedEmployees}
+            />
+          </Suspense>
         </DialogContent>
         <DialogActions>
           <Button onClick={handleClose} color="primary">
             Cancel
           </Button>
-          <Button onClick={handleAddProject} color="primary">
+          <Button onClick={handleAddOrUpdateProject} color="primary">
             {newProject._id ? "Update" : "Add"}
           </Button>
         </DialogActions>
