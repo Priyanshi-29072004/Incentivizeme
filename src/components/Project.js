@@ -16,7 +16,7 @@ import DialogContent from "@mui/material/DialogContent";
 import DialogActions from "@mui/material/DialogActions";
 import TextField from "@mui/material/TextField";
 import CustomDatePicker from "./CustomDatePicker";
-import MultiSelection from "./Multiautoselection";
+import MultiautoSelection from "./Multiautoselection";
 
 export const Project = () => {
   const [rows, setRows] = useState([]);
@@ -30,7 +30,9 @@ export const Project = () => {
     date: null,
     employees: [], // New field for multi-selection
   });
-  const [selectedEmployees, setSelectedEmployees] = useState([]); // State for multi-selection values
+  const [selectedEmployees, setSelectedEmployees] = useState([]);
+  const [filteredEmployees, setFilteredEmployees] = useState([]);
+  const [employees, setEmployees] = useState([]);
 
   useEffect(() => {
     const fetchProjects = async () => {
@@ -38,6 +40,7 @@ export const Project = () => {
         const response = await fetch("http://localhost:5000/api/projects");
         if (!response.ok) throw new Error("Failed to fetch projects");
         const data = await response.json();
+        console.log(">>>>>1data", data);
         setRows(data);
       } catch (error) {
         console.error("Error fetching projects:", error);
@@ -46,8 +49,6 @@ export const Project = () => {
     fetchProjects();
   }, []);
 
-  // Fetch employees for the multi-selection field
-  const [employees, setEmployees] = useState([]);
   useEffect(() => {
     const fetchEmployees = async () => {
       try {
@@ -59,6 +60,7 @@ export const Project = () => {
           name: `${employee.firstName} ${employee.lastName}`,
         }));
         setEmployees(transformedData);
+        setFilteredEmployees(transformedData || []);
       } catch (error) {
         console.error("Error fetching employees:", error);
       }
@@ -100,6 +102,7 @@ export const Project = () => {
     setOpen(false);
     setNewProject({ _id: null, name: "", date: null, employees: [] });
     setSelectedEmployees([]);
+    // setFilteredEmployees([]);
   };
 
   const handleInputChange = (e) => {
@@ -109,7 +112,6 @@ export const Project = () => {
 
   const handleAddOrUpdateProject = async () => {
     const employeeIds = selectedEmployees.map((employee) => employee._id);
-
     const projectData = { ...newProject, employees: employeeIds };
     const method = projectData._id ? "PUT" : "POST";
     const url = projectData._id
@@ -163,7 +165,15 @@ export const Project = () => {
       date: projectToEdit.date ? new Date(projectToEdit.date) : null,
       employees: projectToEdit.employees || [], // Ensure employees are set
     });
-    setSelectedEmployees(projectToEdit.employees || []); // Set selected employees for multi-selection
+    setSelectedEmployees(projectToEdit.employees || []);
+    const selectedEmployeeIds = projectToEdit.employees.map(
+      (selected) => selected.id
+    );
+
+    const filteredEmployees = employees.filter(
+      (employee) => !selectedEmployeeIds.includes(employee._id)
+    );
+    setFilteredEmployees(filteredEmployees || []);
     setOpen(true);
   };
 
@@ -218,7 +228,7 @@ export const Project = () => {
           <TableBody>
             {rows.map((row, index) => {
               const isItemSelected = isSelected(row._id);
-              const labelId = `enhanced-table-checkbox-${index}`;
+              const labelId = `enhanced-table-checkbox-${isItemSelected}`;
 
               return (
                 <TableRow
@@ -304,8 +314,8 @@ export const Project = () => {
             }
           />
           <Suspense fallback={<div>Loading...</div>}>
-            <MultiSelection
-              options={employees}
+            <MultiautoSelection
+              options={filteredEmployees}
               value={selectedEmployees}
               onChange={setSelectedEmployees}
             />
