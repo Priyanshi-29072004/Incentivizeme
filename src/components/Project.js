@@ -8,7 +8,6 @@ import TableCell from "@mui/material/TableCell";
 import TableContainer from "@mui/material/TableContainer";
 import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
-import Checkbox from "@mui/material/Checkbox";
 import TableSortLabel from "@mui/material/TableSortLabel";
 import Dialog from "@mui/material/Dialog";
 import DialogTitle from "@mui/material/DialogTitle";
@@ -27,8 +26,12 @@ export const Project = () => {
   const [newProject, setNewProject] = useState({
     _id: null,
     name: "",
-    date: null,
-    employees: [], // New field for multi-selection
+    startDate: null,
+    endDate: null,
+    estimatedCompletionDate: null,
+    employees: [],
+    status: "pending",
+    bonus: 0,
   });
   const [selectedEmployees, setSelectedEmployees] = useState([]);
   const [filteredEmployees, setFilteredEmployees] = useState([]);
@@ -40,7 +43,6 @@ export const Project = () => {
         const response = await fetch("http://localhost:5000/api/projects");
         if (!response.ok) throw new Error("Failed to fetch projects");
         const data = await response.json();
-        console.log(">>>>>1data", data);
         setRows(data);
       } catch (error) {
         console.error("Error fetching projects:", error);
@@ -74,14 +76,6 @@ export const Project = () => {
     setOrderBy(property);
   };
 
-  const handleSelectAllClick = (event) => {
-    if (event.target.checked) {
-      setSelected(rows.map((row) => row._id));
-    } else {
-      setSelected([]);
-    }
-  };
-
   const handleClick = (event, id) => {
     event.stopPropagation();
     const selectedIndex = selected.indexOf(id);
@@ -100,9 +94,17 @@ export const Project = () => {
   const handleClickOpen = () => setOpen(true);
   const handleClose = () => {
     setOpen(false);
-    setNewProject({ _id: null, name: "", date: null, employees: [] });
+    setNewProject({
+      _id: null,
+      name: "",
+      startDate: null,
+      endDate: null,
+      estimatedCompletionDate: null,
+      employees: [],
+      status: "pending",
+      bonus: 0,
+    });
     setSelectedEmployees([]);
-    // setFilteredEmployees([]);
   };
 
   const handleInputChange = (e) => {
@@ -112,7 +114,11 @@ export const Project = () => {
 
   const handleAddOrUpdateProject = async () => {
     const employeeIds = selectedEmployees.map((employee) => employee._id);
-    const projectData = { ...newProject, employees: employeeIds };
+    const { endDate, ...projectDataWithoutEndDate } = newProject; // Exclude endDate
+    const projectData = {
+      ...projectDataWithoutEndDate,
+      employees: employeeIds,
+    };
     const method = projectData._id ? "PUT" : "POST";
     const url = projectData._id
       ? `http://localhost:5000/api/projects/${projectData._id}`
@@ -162,12 +168,20 @@ export const Project = () => {
     const projectToEdit = rows.find((row) => row._id === _id);
     setNewProject({
       ...projectToEdit,
-      date: projectToEdit.date ? new Date(projectToEdit.date) : null,
-      employees: projectToEdit.employees || [], // Ensure employees are set
+      startDate: projectToEdit.startDate
+        ? new Date(projectToEdit.startDate)
+        : null,
+      endDate: projectToEdit.endDate ? new Date(projectToEdit.endDate) : null,
+      estimatedCompletionDate: projectToEdit.estimatedCompletionDate
+        ? new Date(projectToEdit.estimatedCompletionDate)
+        : null,
+      employees: projectToEdit.employees || [],
+      status: projectToEdit.status || "pending",
+      bonus: projectToEdit.bonus || 0,
     });
     setSelectedEmployees(projectToEdit.employees || []);
     const selectedEmployeeIds = projectToEdit.employees.map(
-      (selected) => selected.id
+      (selected) => selected._id
     );
 
     const filteredEmployees = employees.filter(
@@ -188,16 +202,6 @@ export const Project = () => {
         <Table sx={{ minWidth: 750 }} size="medium">
           <TableHead>
             <TableRow>
-              <TableCell padding="checkbox">
-                <Checkbox
-                  color="primary"
-                  indeterminate={
-                    selected.length > 0 && selected.length < rows.length
-                  }
-                  checked={rows.length > 0 && selected.length === rows.length}
-                  onChange={handleSelectAllClick}
-                />
-              </TableCell>
               <TableCell
                 key="name"
                 sortDirection={orderBy === "name" ? order : false}
@@ -211,22 +215,64 @@ export const Project = () => {
                 </TableSortLabel>
               </TableCell>
               <TableCell
-                key="date"
-                sortDirection={orderBy === "date" ? order : false}
+                key="startDate"
+                sortDirection={orderBy === "startDate" ? order : false}
               >
                 <TableSortLabel
-                  active={orderBy === "date"}
-                  direction={orderBy === "date" ? order : "asc"}
-                  onClick={(event) => handleRequestSort(event, "date")}
+                  active={orderBy === "startDate"}
+                  direction={orderBy === "startDate" ? order : "asc"}
+                  onClick={(event) => handleRequestSort(event, "startDate")}
                 >
-                  Date
+                  Start Date
+                </TableSortLabel>
+              </TableCell>
+              <TableCell
+                key="endDate"
+                sortDirection={orderBy === "endDate" ? order : false}
+              >
+                <TableSortLabel
+                  active={orderBy === "endDate"}
+                  direction={orderBy === "endDate" ? order : "asc"}
+                  onClick={(event) => handleRequestSort(event, "endDate")}
+                >
+                  End Date
+                </TableSortLabel>
+              </TableCell>
+              <TableCell
+                key="estimatedCompletionDate"
+                sortDirection={
+                  orderBy === "estimatedCompletionDate" ? order : false
+                }
+              >
+                <TableSortLabel
+                  active={orderBy === "estimatedCompletionDate"}
+                  direction={
+                    orderBy === "estimatedCompletionDate" ? order : "asc"
+                  }
+                  onClick={(event) =>
+                    handleRequestSort(event, "estimatedCompletionDate")
+                  }
+                >
+                  Estimated Completion Date
+                </TableSortLabel>
+              </TableCell>
+              <TableCell
+                key="status"
+                sortDirection={orderBy === "status" ? order : false}
+              >
+                <TableSortLabel
+                  active={orderBy === "status"}
+                  direction={orderBy === "status" ? order : "asc"}
+                  onClick={(event) => handleRequestSort(event, "status")}
+                >
+                  Status
                 </TableSortLabel>
               </TableCell>
               <TableCell>Actions</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
-            {rows.map((row, index) => {
+            {rows.map((row) => {
               const isItemSelected = isSelected(row._id);
               const labelId = `enhanced-table-checkbox-${isItemSelected}`;
 
@@ -241,13 +287,6 @@ export const Project = () => {
                   selected={isItemSelected}
                   sx={{ cursor: "pointer" }}
                 >
-                  <TableCell padding="checkbox">
-                    <Checkbox
-                      color="primary"
-                      checked={isItemSelected}
-                      inputProps={{ "aria-labelledby": labelId }}
-                    />
-                  </TableCell>
                   <TableCell
                     component="th"
                     id={labelId}
@@ -257,32 +296,28 @@ export const Project = () => {
                     {row.name}
                   </TableCell>
                   <TableCell>
-                    {row.date
-                      ? new Date(row.date).toLocaleDateString()
-                      : "No Date"}
+                    {row.startDate
+                      ? new Date(row.startDate).toLocaleDateString()
+                      : "No Start Date"}
                   </TableCell>
                   <TableCell>
-                    <Button
-                      variant="contained"
-                      color="primary"
-                      size="small"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleEditClick(row._id);
-                      }}
-                      sx={{ marginRight: 1 }}
-                    >
+                    {row.endDate
+                      ? new Date(row.endDate).toLocaleDateString()
+                      : "No End Date"}
+                  </TableCell>
+                  <TableCell>
+                    {row.estimatedCompletionDate
+                      ? new Date(
+                          row.estimatedCompletionDate
+                        ).toLocaleDateString()
+                      : "No Estimated Completion Date"}
+                  </TableCell>
+                  <TableCell>{row.status || "No Status"}</TableCell>
+                  <TableCell>
+                    <Button onClick={() => handleEditClick(row._id)}>
                       Edit
                     </Button>
-                    <Button
-                      variant="contained"
-                      color="secondary"
-                      size="small"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDeleteClick(row._id);
-                      }}
-                    >
+                    <Button onClick={() => handleDeleteClick(row._id)}>
                       Delete
                     </Button>
                   </TableCell>
@@ -292,11 +327,14 @@ export const Project = () => {
           </TableBody>
         </Table>
       </TableContainer>
+
       <Dialog open={open} onClose={handleClose}>
         <DialogTitle>
-          {newProject._id ? "Edit Project" : "Create New Project"}
+          {newProject._id ? "Edit Project" : "Create Project"}
         </DialogTitle>
-        <DialogContent>
+        <DialogContent
+          sx={{ display: "flex", flexDirection: "column", gap: 2 }}
+        >
           <TextField
             autoFocus
             margin="dense"
@@ -308,10 +346,38 @@ export const Project = () => {
             onChange={handleInputChange}
           />
           <CustomDatePicker
-            value={newProject.date}
+            label="Start Date"
+            value={newProject.startDate}
             onChange={(newValue) =>
-              setNewProject((prev) => ({ ...prev, date: newValue }))
+              setNewProject((prev) => ({ ...prev, startDate: newValue }))
             }
+          />
+          {/* Always exclude End Date */}
+          {/* <CustomDatePicker
+    label="End Date"
+    value={newProject.endDate}
+    onChange={(newValue) =>
+      setNewProject((prev) => ({ ...prev, endDate: newValue }))
+    }
+  /> */}
+          <CustomDatePicker
+            label="Estimated Completion Date"
+            value={newProject.estimatedCompletionDate}
+            onChange={(newValue) =>
+              setNewProject((prev) => ({
+                ...prev,
+                estimatedCompletionDate: newValue,
+              }))
+            }
+          />
+          <TextField
+            margin="dense"
+            name="bonus"
+            label="Bonus"
+            type="number"
+            fullWidth
+            value={newProject.bonus}
+            onChange={handleInputChange}
           />
           <Suspense fallback={<div>Loading...</div>}>
             <MultiautoSelection
@@ -321,12 +387,11 @@ export const Project = () => {
             />
           </Suspense>
         </DialogContent>
+
         <DialogActions>
-          <Button onClick={handleClose} color="primary">
-            Cancel
-          </Button>
-          <Button onClick={handleAddOrUpdateProject} color="primary">
-            {newProject._id ? "Update" : "Add"}
+          <Button onClick={handleClose}>Cancel</Button>
+          <Button onClick={handleAddOrUpdateProject}>
+            {newProject._id ? "Update" : "Create"}
           </Button>
         </DialogActions>
       </Dialog>

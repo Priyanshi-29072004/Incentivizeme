@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Paper from "@mui/material/Paper";
@@ -8,13 +8,15 @@ import TableCell from "@mui/material/TableCell";
 import TableContainer from "@mui/material/TableContainer";
 import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
-import Checkbox from "@mui/material/Checkbox";
 import TableSortLabel from "@mui/material/TableSortLabel";
 import Dialog from "@mui/material/Dialog";
 import DialogTitle from "@mui/material/DialogTitle";
 import DialogContent from "@mui/material/DialogContent";
 import DialogActions from "@mui/material/DialogActions";
 import TextField from "@mui/material/TextField";
+import { DatePicker } from "@mui/x-date-pickers/DatePicker";
+import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
+import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 
 export const Employee = () => {
   const [rows, setRows] = useState([]);
@@ -26,10 +28,11 @@ export const Employee = () => {
     _id: null,
     firstName: "",
     lastName: "",
-    age: "",
+
+    hourlyRate: "",
+    dateOfJoining: null, // Initialize with null or a default date
   });
 
-  // Fetch data from API when the component mounts
   useEffect(() => {
     const fetchEmployees = async () => {
       try {
@@ -48,15 +51,6 @@ export const Employee = () => {
     const isAsc = orderBy === property && order === "asc";
     setOrder(isAsc ? "desc" : "asc");
     setOrderBy(property);
-  };
-
-  const handleSelectAllClick = (event) => {
-    if (event.target.checked) {
-      const newSelecteds = rows.map((n) => n._id);
-      setSelected(newSelecteds);
-      return;
-    }
-    setSelected([]);
   };
 
   const handleClick = (event, id) => {
@@ -91,7 +85,9 @@ export const Employee = () => {
       _id: null,
       firstName: "",
       lastName: "",
-      age: "",
+
+      hourlyRate: "",
+      dateOfJoining: null,
     });
   };
 
@@ -103,9 +99,15 @@ export const Employee = () => {
     });
   };
 
+  const handleDateChange = (date) => {
+    setNewEmployee({
+      ...newEmployee,
+      dateOfJoining: date,
+    });
+  };
+
   const handleAddEmployee = async () => {
     if (newEmployee._id) {
-      // PUT request to update an existing employee
       try {
         const response = await fetch(
           `http://localhost:5000/api/employees/${newEmployee._id}`,
@@ -143,7 +145,7 @@ export const Employee = () => {
 
         if (response.ok) {
           const savedEmployee = await response.json();
-          setRows([...rows, savedEmployee]); // Add the saved employee to the state
+          setRows([...rows, savedEmployee]);
         } else {
           console.error("Failed to add employee");
         }
@@ -164,7 +166,7 @@ export const Employee = () => {
       );
 
       if (response.ok) {
-        setRows(rows.filter((row) => row._id !== _id)); // Remove the deleted employee from the state
+        setRows(rows.filter((row) => row._id !== _id));
       } else {
         console.error("Failed to delete employee");
       }
@@ -175,7 +177,12 @@ export const Employee = () => {
 
   const handleEditClick = (_id) => {
     const employeeToEdit = rows.find((row) => row._id === _id);
-    setNewEmployee(employeeToEdit);
+    setNewEmployee({
+      ...employeeToEdit,
+      dateOfJoining: employeeToEdit.dateOfJoining
+        ? new Date(employeeToEdit.dateOfJoining)
+        : null,
+    });
     setOpen(true);
   };
 
@@ -194,16 +201,6 @@ export const Employee = () => {
         >
           <TableHead>
             <TableRow>
-              <TableCell padding="checkbox">
-                <Checkbox
-                  color="primary"
-                  indeterminate={
-                    selected.length > 0 && selected.length < rows.length
-                  }
-                  checked={rows.length > 0 && selected.length === rows.length}
-                  onChange={handleSelectAllClick}
-                />
-              </TableCell>
               <TableCell
                 key="firstName"
                 sortDirection={orderBy === "firstName" ? order : false}
@@ -228,19 +225,10 @@ export const Employee = () => {
                   Last Name
                 </TableSortLabel>
               </TableCell>
-              <TableCell
-                key="age"
-                sortDirection={orderBy === "age" ? order : false}
-              >
-                <TableSortLabel
-                  active={orderBy === "age"}
-                  direction={orderBy === "age" ? order : "asc"}
-                  onClick={(event) => handleRequestSort(event, "age")}
-                >
-                  Age
-                </TableSortLabel>
-              </TableCell>
-              <TableCell>Actions</TableCell>
+
+              <TableCell key="hourlyRate">Hourly Rate</TableCell>
+              <TableCell key="dateOfJoining">Date of Joining</TableCell>
+              <TableCell key="actions">Actions</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -259,15 +247,6 @@ export const Employee = () => {
                   selected={isItemSelected}
                   sx={{ cursor: "pointer" }}
                 >
-                  <TableCell padding="checkbox">
-                    <Checkbox
-                      color="primary"
-                      checked={isItemSelected}
-                      inputProps={{
-                        "aria-labelledby": labelId,
-                      }}
-                    />
-                  </TableCell>
                   <TableCell
                     component="th"
                     id={labelId}
@@ -277,21 +256,31 @@ export const Employee = () => {
                     {row.firstName}
                   </TableCell>
                   <TableCell>{row.lastName}</TableCell>
-                  <TableCell>{row.age}</TableCell>
+                  <TableCell>{row.hourlyRate || "0"}</TableCell>
+                  <TableCell>
+                    {row.dateOfJoining
+                      ? new Date(row.dateOfJoining).toLocaleDateString(
+                          "en-GB",
+                          {
+                            day: "numeric",
+                            month: "numeric",
+                            year: "numeric",
+                          }
+                        )
+                      : ""}
+                  </TableCell>
                   <TableCell>
                     <Button
                       variant="contained"
                       color="primary"
-                      size="small"
                       onClick={() => handleEditClick(row._id)}
-                      sx={{ marginRight: 1 }}
+                      sx={{ mr: 1 }}
                     >
                       Edit
                     </Button>
                     <Button
                       variant="contained"
                       color="secondary"
-                      size="small"
                       onClick={() => handleDeleteClick(row._id)}
                     >
                       Delete
@@ -303,47 +292,55 @@ export const Employee = () => {
           </TableBody>
         </Table>
       </TableContainer>
+
       <Dialog open={open} onClose={handleClose}>
         <DialogTitle>
-          {newEmployee._id ? "Edit Employee" : "Create New Employee"}
+          {newEmployee._id ? "Edit Employee" : "Add Employee"}
         </DialogTitle>
         <DialogContent>
-          <TextField
-            autoFocus
-            margin="dense"
-            name="firstName"
-            label="First Name"
-            type="text"
-            fullWidth
-            value={newEmployee.firstName}
-            onChange={handleInputChange}
-          />
-          <TextField
-            margin="dense"
-            name="lastName"
-            label="Last Name"
-            type="text"
-            fullWidth
-            value={newEmployee.lastName}
-            onChange={handleInputChange}
-          />
-          <TextField
-            margin="dense"
-            name="age"
-            label="Age"
-            type="number"
-            fullWidth
-            value={newEmployee.age}
-            onChange={handleInputChange}
-          />
+          <Box component="form" sx={{ mt: 2 }}>
+            <TextField
+              margin="dense"
+              name="firstName"
+              label="First Name"
+              fullWidth
+              variant="outlined"
+              value={newEmployee.firstName}
+              onChange={handleInputChange}
+            />
+            <TextField
+              margin="dense"
+              name="lastName"
+              label="Last Name"
+              fullWidth
+              variant="outlined"
+              value={newEmployee.lastName}
+              onChange={handleInputChange}
+            />
+
+            <TextField
+              margin="dense"
+              name="hourlyRate"
+              label="Hourly Rate"
+              type="number"
+              fullWidth
+              variant="outlined"
+              value={newEmployee.hourlyRate || ""}
+              onChange={handleInputChange}
+            />
+            <LocalizationProvider dateAdapter={AdapterDateFns}>
+              <DatePicker
+                label="Date of Joining"
+                value={newEmployee.dateOfJoining}
+                onChange={handleDateChange}
+                renderInput={(params) => <TextField {...params} fullWidth />}
+              />
+            </LocalizationProvider>
+          </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleClose} color="primary">
-            Cancel
-          </Button>
-          <Button onClick={handleAddEmployee} color="primary">
-            {newEmployee._id ? "Update" : "Add"}
-          </Button>
+          <Button onClick={handleClose}>Cancel</Button>
+          <Button onClick={handleAddEmployee}>Save</Button>
         </DialogActions>
       </Dialog>
     </Box>
