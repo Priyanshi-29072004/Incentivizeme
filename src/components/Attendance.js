@@ -286,6 +286,7 @@ export const Attendance = () => {
           <DateTimePickerComponent
             label="Start Time"
             value={newAttendance.startTime}
+            disableFuture={true}
             onChange={handleDateChange("startTime")}
           />
           <DateTimePickerComponent

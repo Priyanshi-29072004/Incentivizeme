@@ -114,11 +114,15 @@ export const Project = () => {
 
   const handleAddOrUpdateProject = async () => {
     const employeeIds = selectedEmployees.map((employee) => employee._id);
-    const { endDate, ...projectDataWithoutEndDate } = newProject; // Exclude endDate
     const projectData = {
-      ...projectDataWithoutEndDate,
+      _id: newProject._id,
       employees: employeeIds,
+      startDate: newProject.startDate,
+      estimatedCompletionDate: newProject.estimatedCompletionDate,
+      bonus: newProject.bonus,
+      name: newProject.name,
     };
+
     const method = projectData._id ? "PUT" : "POST";
     const url = projectData._id
       ? `http://localhost:5000/api/projects/${projectData._id}`
@@ -191,83 +195,51 @@ export const Project = () => {
     setOpen(true);
   };
 
+  const handleMarkComplete = async () => {
+    try {
+      await fetch("http://localhost:5000/api/projects/mark-complete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ projectIds: selected }),
+      });
+      // Refresh projects after marking complete
+      const response = await fetch("http://localhost:5000/api/projects");
+      if (!response.ok) throw new Error("Failed to fetch projects");
+      const data = await response.json();
+      setRows(data);
+      setSelected([]);
+    } catch (error) {
+      console.error("Error marking projects complete:", error);
+    }
+  };
+
   return (
     <Box sx={{ height: 400, width: "100%", paddingTop: 5 }}>
       <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
         <Button variant="contained" onClick={handleClickOpen}>
           + Create
         </Button>
+        <Button
+          variant="contained"
+          color="secondary"
+          onClick={handleMarkComplete}
+          disabled={selected.length === 0}
+        >
+          Mark Complete
+        </Button>
       </Box>
       <TableContainer component={Paper}>
         <Table sx={{ minWidth: 750 }} size="medium">
           <TableHead>
             <TableRow>
-              <TableCell
-                key="name"
-                sortDirection={orderBy === "name" ? order : false}
-              >
-                <TableSortLabel
-                  active={orderBy === "name"}
-                  direction={orderBy === "name" ? order : "asc"}
-                  onClick={(event) => handleRequestSort(event, "name")}
-                >
-                  Name
-                </TableSortLabel>
+              <TableCell>Select</TableCell>
+              <TableCell key="name">Name</TableCell>
+              <TableCell key="startDate">Start Date</TableCell>
+              <TableCell key="endDate">End Date</TableCell>
+              <TableCell key="estimatedCompletionDate">
+                Estimated Completion Date
               </TableCell>
-              <TableCell
-                key="startDate"
-                sortDirection={orderBy === "startDate" ? order : false}
-              >
-                <TableSortLabel
-                  active={orderBy === "startDate"}
-                  direction={orderBy === "startDate" ? order : "asc"}
-                  onClick={(event) => handleRequestSort(event, "startDate")}
-                >
-                  Start Date
-                </TableSortLabel>
-              </TableCell>
-              <TableCell
-                key="endDate"
-                sortDirection={orderBy === "endDate" ? order : false}
-              >
-                <TableSortLabel
-                  active={orderBy === "endDate"}
-                  direction={orderBy === "endDate" ? order : "asc"}
-                  onClick={(event) => handleRequestSort(event, "endDate")}
-                >
-                  End Date
-                </TableSortLabel>
-              </TableCell>
-              <TableCell
-                key="estimatedCompletionDate"
-                sortDirection={
-                  orderBy === "estimatedCompletionDate" ? order : false
-                }
-              >
-                <TableSortLabel
-                  active={orderBy === "estimatedCompletionDate"}
-                  direction={
-                    orderBy === "estimatedCompletionDate" ? order : "asc"
-                  }
-                  onClick={(event) =>
-                    handleRequestSort(event, "estimatedCompletionDate")
-                  }
-                >
-                  Estimated Completion Date
-                </TableSortLabel>
-              </TableCell>
-              <TableCell
-                key="status"
-                sortDirection={orderBy === "status" ? order : false}
-              >
-                <TableSortLabel
-                  active={orderBy === "status"}
-                  direction={orderBy === "status" ? order : "asc"}
-                  onClick={(event) => handleRequestSort(event, "status")}
-                >
-                  Status
-                </TableSortLabel>
-              </TableCell>
+              <TableCell key="status">Status</TableCell>
               <TableCell>Actions</TableCell>
             </TableRow>
           </TableHead>
@@ -287,6 +259,13 @@ export const Project = () => {
                   selected={isItemSelected}
                   sx={{ cursor: "pointer" }}
                 >
+                  <TableCell padding="checkbox">
+                    <input
+                      type="checkbox"
+                      checked={isItemSelected}
+                      onChange={(event) => handleClick(event, row._id)}
+                    />
+                  </TableCell>
                   <TableCell
                     component="th"
                     id={labelId}

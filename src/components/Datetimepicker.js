@@ -9,7 +9,7 @@ const DateTimePickerComponent = ({ value, onChange, label }) => {
     <LocalizationProvider dateAdapter={AdapterDateFns}>
       <DateTimePicker
         renderInput={(params) => <TextField {...params} fullWidth />}
-        value={value}
+        value={value || null}
         onChange={onChange}
         label={label}
       />

@@ -21,16 +21,15 @@ import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 export const Employee = () => {
   const [rows, setRows] = useState([]);
   const [order, setOrder] = useState("asc");
-  const [orderBy, setOrderBy] = useState("id");
+  const [orderBy, setOrderBy] = useState("firstName");
   const [selected, setSelected] = useState([]);
   const [open, setOpen] = useState(false);
   const [newEmployee, setNewEmployee] = useState({
     _id: null,
     firstName: "",
     lastName: "",
-
     hourlyRate: "",
-    dateOfJoining: null, // Initialize with null or a default date
+    dateOfJoining: null,
   });
 
   useEffect(() => {
@@ -85,7 +84,6 @@ export const Employee = () => {
       _id: null,
       firstName: "",
       lastName: "",
-
       hourlyRate: "",
       dateOfJoining: null,
     });
@@ -187,10 +185,10 @@ export const Employee = () => {
   };
 
   return (
-    <Box sx={{ height: 400, width: "100%", paddingTop: 5 }}>
-      <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
+    <Box sx={{ p: 3 }}>
+      <Box sx={{ display: "flex", justifyContent: "flex-end", mb: 2 }}>
         <Button variant="contained" onClick={handleClickOpen}>
-          +Create
+          + Create
         </Button>
       </Box>
       <TableContainer component={Paper}>
@@ -201,34 +199,26 @@ export const Employee = () => {
         >
           <TableHead>
             <TableRow>
-              <TableCell
-                key="firstName"
-                sortDirection={orderBy === "firstName" ? order : false}
-              >
-                <TableSortLabel
-                  active={orderBy === "firstName"}
-                  direction={orderBy === "firstName" ? order : "asc"}
-                  onClick={(event) => handleRequestSort(event, "firstName")}
-                >
-                  First Name
-                </TableSortLabel>
-              </TableCell>
-              <TableCell
-                key="lastName"
-                sortDirection={orderBy === "lastName" ? order : false}
-              >
-                <TableSortLabel
-                  active={orderBy === "lastName"}
-                  direction={orderBy === "lastName" ? order : "asc"}
-                  onClick={(event) => handleRequestSort(event, "lastName")}
-                >
-                  Last Name
-                </TableSortLabel>
-              </TableCell>
-
-              <TableCell key="hourlyRate">Hourly Rate</TableCell>
-              <TableCell key="dateOfJoining">Date of Joining</TableCell>
-              <TableCell key="actions">Actions</TableCell>
+              {["firstName", "lastName", "hourlyRate", "dateOfJoining"].map(
+                (headCell) => (
+                  <TableCell
+                    key={headCell}
+                    align="center"
+                    sortDirection={orderBy === headCell ? order : false}
+                  >
+                    <TableSortLabel
+                      active={orderBy === headCell}
+                      direction={orderBy === headCell ? order : "asc"}
+                      onClick={(event) => handleRequestSort(event, headCell)}
+                    >
+                      {headCell
+                        .replace(/([A-Z])/g, " $1")
+                        .replace(/^./, (str) => str.toUpperCase())}
+                    </TableSortLabel>
+                  </TableCell>
+                )
+              )}
+              <TableCell align="center">Actions</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -252,12 +242,13 @@ export const Employee = () => {
                     id={labelId}
                     scope="row"
                     padding="none"
+                    align="center"
                   >
                     {row.firstName}
                   </TableCell>
-                  <TableCell>{row.lastName}</TableCell>
-                  <TableCell>{row.hourlyRate || "0"}</TableCell>
-                  <TableCell>
+                  <TableCell align="center">{row.lastName}</TableCell>
+                  <TableCell align="center">{row.hourlyRate || "0"}</TableCell>
+                  <TableCell align="center">
                     {row.dateOfJoining
                       ? new Date(row.dateOfJoining).toLocaleDateString(
                           "en-GB",
@@ -269,7 +260,7 @@ export const Employee = () => {
                         )
                       : ""}
                   </TableCell>
-                  <TableCell>
+                  <TableCell align="center">
                     <Button
                       variant="contained"
                       color="primary"
@@ -298,7 +289,10 @@ export const Employee = () => {
           {newEmployee._id ? "Edit Employee" : "Add Employee"}
         </DialogTitle>
         <DialogContent>
-          <Box component="form" sx={{ mt: 2 }}>
+          <Box
+            component="form"
+            sx={{ display: "flex", flexDirection: "column", gap: 2 }}
+          >
             <TextField
               margin="dense"
               name="firstName"
@@ -317,7 +311,6 @@ export const Employee = () => {
               value={newEmployee.lastName}
               onChange={handleInputChange}
             />
-
             <TextField
               margin="dense"
               name="hourlyRate"

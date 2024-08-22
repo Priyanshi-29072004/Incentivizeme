@@ -18,6 +18,9 @@ const Header = () => {
         <Typography variant="h6" style={{ flexGrow: 1 }}>
           Incentivizeme
         </Typography>
+        <Button color="inherit" component={Link} to="/">
+          Dashboard
+        </Button>
         <Button color="inherit" component={Link} to="/employees">
           Employee
         </Button>
@@ -26,6 +29,9 @@ const Header = () => {
         </Button>
         <Button color="inherit" component={Link} to="/attendance">
           Attendance
+        </Button>
+        <Button color="inherit" component={Link} to="/report">
+          Report
         </Button>
         {!isAuthenticated ? (
           <Button color="inherit" component={Link} to="/login">

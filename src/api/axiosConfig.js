@@ -36,9 +36,11 @@ instance.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
-    let errorMessage = "An error occurred. Please try again.";
+    let errorMessage =
+      error.response.data.message || "An error occurred. Please try again.";
 
     if (axios.isAxiosError(error)) {
+      console.log(">>>>>error", error);
       if (error.response) {
         if (error.response.status === 401 && !originalRequest._retry) {
           originalRequest._retry = true;
@@ -59,14 +61,18 @@ instance.interceptors.response.use(
           errorMessage =
             "The requested resource was not found. Please contact the administrator.";
         } else {
-          errorMessage = "An error occurred. Please try again later.";
+          errorMessage =
+            error.response.data.message ||
+            "An error occurred. Please try again later.";
         }
       } else if (error.request) {
         errorMessage =
           "Something went wrong. Please contact the administrator.";
+      } else {
+        errorMessage = error.response.data.message;
       }
     }
-
+    console.log(">>>>>>>>>>", errorMessage);
     return Promise.reject(errorMessage);
   }
 );

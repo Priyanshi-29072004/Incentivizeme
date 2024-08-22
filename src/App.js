@@ -4,6 +4,7 @@ import Header from "components/Header";
 import { HomePage } from "components/HomePage";
 import { Employee } from "components/Employee";
 import { Project } from "components/Project";
+import PayrollReport from "components/PayrollReport";
 import { Attendance } from "components/Attendance";
 import Login from "components/Login";
 import Register from "components/Register";
@@ -29,6 +30,10 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/logout" element={<Logout />} />
         <Route path="/register" element={<Register />} />
+        <Route
+          path="/report"
+          element={<PrivateRoute component={PayrollReport} />}
+        />
         <Route path="/forgot-password" element={<ForgotPassword />} />
       </Routes>
     </Router>

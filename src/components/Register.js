@@ -6,8 +6,8 @@ import {
   Button,
   Typography,
   Box,
+  Snackbar,
   Alert,
-  AlertTitle,
 } from "@mui/material";
 import { Link, useNavigate } from "react-router-dom";
 
@@ -16,6 +16,7 @@ const Register = () => {
   const [password, setPassword] = useState("");
   const [password2, setPassword2] = useState("");
   const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(false);
   const navigate = useNavigate();
 
   const validateEmail = (input) => {
@@ -47,14 +48,26 @@ const Register = () => {
         password,
       });
       if (response.status === 201) {
-        alert("User successfully registered! Please log in.");
-        navigate("/login");
+        setSuccess(true);
       } else {
         setError("Registration failed. Please try again.");
       }
     } catch (error) {
-      setError(error.message);
+      if (
+        error.response &&
+        error.response.data &&
+        error.response.data.message
+      ) {
+        setError(error.response.data.message);
+      } else {
+        setError(error);
+      }
     }
+  };
+
+  const handleClose = () => {
+    setSuccess(false);
+    navigate("/login");
   };
 
   return (
@@ -72,7 +85,6 @@ const Register = () => {
         </Typography>
         {error && (
           <Alert severity="error" sx={{ mt: 2 }}>
-            <AlertTitle>Error</AlertTitle>
             {error}
           </Alert>
         )}
@@ -129,6 +141,26 @@ const Register = () => {
         <Typography variant="body2">
           Already have an account? <Link to="/login">Login</Link>
         </Typography>
+
+        <Snackbar
+          open={success}
+          onClose={handleClose}
+          anchorOrigin={{ vertical: "top", horizontal: "right" }}
+          autoHideDuration={6000}
+        >
+          <Alert
+            onClose={handleClose}
+            severity="success"
+            sx={{ width: "100%" }}
+            action={
+              <Button color="inherit" size="small" onClick={handleClose}>
+                OK
+              </Button>
+            }
+          >
+            Registration successful! Please log in.
+          </Alert>
+        </Snackbar>
       </Box>
     </Container>
   );
