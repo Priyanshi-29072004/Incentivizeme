@@ -47,6 +47,10 @@ export const HomePage = () => {
   const bonus =
     typeof topEarner.bonus === "number" ? topEarner.bonus.toFixed(2) : "0.00";
   const name = topEarner.name || "No data";
+  const chartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+  };
 
   const chartData = {
     labels: data.topEarners.map((earner) => earner.name),
@@ -94,7 +98,9 @@ export const HomePage = () => {
             <Typography variant="h6" gutterBottom>
               Top 10 Earners
             </Typography>
-            <Bar data={chartData} />
+            <div style={{ width: "1700px", height: "500px" }}>
+              <Bar data={chartData} options={chartOptions} />
+            </div>
           </Paper>
         </Grid>
       </Grid>
